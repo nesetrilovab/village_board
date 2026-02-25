@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ads {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ad_type         String    @db.VarChar(20)
+  title           String    @db.VarChar(255)
+  item_name       String?   @db.VarChar(255)
+  picture         String?
+  price           Decimal?  @db.Decimal(10, 2)
+  description     String
+  location        String?   @db.VarChar(255)
+  status          String    @default("DRAFT") @db.VarChar(20)
+  author_id       String    @db.Uuid
+  date_of_release DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  users           users     @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ad_author")
+}
+
+model articles {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String        @db.VarChar(255)
+  subtitle        String?       @db.VarChar(255)
+  text            String
+  cover_image     String?
+  status          String        @default("DRAFT") @db.VarChar(20)
+  author_id       String        @db.Uuid
+  date_of_release DateTime?     @db.Timestamp(6)
+  created_at      DateTime      @default(now()) @db.Timestamp(6)
+  users           users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_author")
+  attachments     attachments[]
+}
+
+model attachments {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename   String    @db.VarChar(255)
+  url        String
+  article_id String?   @db.Uuid
+  event_id   String?   @db.Uuid
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  articles   articles? @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_article")
+  events     events?   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_event")
+}
+
+model events {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String        @db.VarChar(255)
+  subtitle        String?       @db.VarChar(255)
+  text            String
+  cover_image     String?
+  event_date      DateTime      @db.Timestamp(6)
+  address         String        @db.VarChar(255)
+  status          String        @default("DRAFT") @db.VarChar(20)
+  author_id       String        @db.Uuid
+  date_of_release DateTime?     @db.Timestamp(6)
+  created_at      DateTime      @default(now()) @db.Timestamp(6)
+  attachments     attachments[]
+  users           users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event_author")
+}
+
+model users {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String     @db.VarChar(100)
+  email         String     @unique @db.VarChar(255)
+  password_hash String
+  role          String     @default("USER") @db.VarChar(20)
+  created_at    DateTime   @default(now()) @db.Timestamp(6)
+  ads           ads[]
+  articles      articles[]
+  events        events[]
+}
