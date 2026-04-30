@@ -10,10 +10,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       request,
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-        tokenPayload: JSON.stringify({}), // Tady můžeš později přidat ID uživatele
+        tokenPayload: JSON.stringify({}), 
       }),
       onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // Tato část se spustí, až bude soubor bezpečně v cloudu
         console.log('Upload dokončen:', blob.url);
       },
     });

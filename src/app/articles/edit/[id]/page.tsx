@@ -2,10 +2,11 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { upload } from "@vercel/blob/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -13,42 +14,35 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const router = useRouter();
 
-  // Stavy pro data
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [text, setText] = useState("");
-  const [status, setStatus] = useState("DRAFT");
-  const [existingCoverImage, setExistingCoverImage] = useState("");
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [status, setStatus] = useState("PUBLISHED");
+  const [existingPicture, setExistingPicture] = useState("");
   
-  // Stavy pro nové soubory
   const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [attachments, setAttachments] = useState<File[]>([]);
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Načtení stávajících dat článku
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchArticle = async () => {
       try {
-        const res = await fetch(`/api/feed/${id}`);
+        const res = await fetch(`/api/articles/${id}`);
         if (res.ok) {
           const data = await res.json();
-          setTitle(data.title);
+          setTitle(data.title || "");
           setSubtitle(data.subtitle || "");
           setText(data.text || "");
-          setStatus(data.status);
-          setExistingCoverImage(data.cover_image || "");
-          setExistingAttachments(data.attachments || []);
+          setStatus(data.status || "PUBLISHED");
+          setExistingPicture(data.cover_image || "");
         }
       } catch (err) {
-        console.error("Chyba při načítání:", err);
+        console.error("Chyba při načítání článku:", err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
+    fetchArticle();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,117 +50,82 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
     setIsSubmitting(true);
 
     try {
-      // 1. Upload nového Cover Image (pokud byl vybrán)
-      let coverUrl = existingCoverImage;
+      let coverUrl = existingPicture;
       if (coverImage) {
-        const formData = new FormData();
-        formData.append("file", coverImage);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        coverUrl = data.url;
+        const newBlob = await upload(coverImage.name, coverImage, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        coverUrl = newBlob.url;
       }
 
-      // 2. Upload nových příloh
-      const newUploadedAttachments = await Promise.all(
-        attachments.map(async (file) => {
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
-          const data = await res.json();
-          return { filename: file.name, url: data.url };
-        })
-      );
-
-      // 3. Update Article (PATCH)
-      const response = await fetch(`/api/feed/${id}`, {
+      const res = await fetch(`/api/articles/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          subtitle,
-          text,
-          status,
-          cover_image: coverUrl,
-          // Spojíme staré přílohy s nově nahranými
-          attachments: [...existingAttachments, ...newUploadedAttachments],
-        }),
+        body: JSON.stringify({ title, subtitle, text, status, cover_image: coverUrl }),
       });
 
-      if (response.ok) {
-        alert("Článek byl úspěšně upraven! ✨");
-        router.push(`/feed/${id}`);
+      if (res.ok) {
+        alert("Článek úspěšně upraven!");
+        router.push(`/articles/${id}`);
         router.refresh();
       }
     } catch (err) {
-      alert("Něco se nepovedlo při ukládání.");
+      alert("Něco se nepovedlo.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Načítání dat článku...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Načítání článku...</div>;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-8">
-      <Card className="w-full max-w-4xl shadow-xl rounded-3xl border-t-8 border-t-blue-600">
+    <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
+      <Card className="w-full max-w-2xl shadow-lg rounded-2xl border-t-8 border-t-blue-600">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-slate-800 text-center">Upravit článek</CardTitle>
+          <CardTitle className="text-2xl font-bold text-slate-800 text-center">Upravit článek</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              
               <div className="space-y-2">
-                <Label>Nadpis</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DRAFT">Draft (Rozpracováno)</SelectItem>
-                    <SelectItem value="PUBLISHED">Published (Zveřejnit)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Podnadpis</Label>
+                <Input className="rounded-xl" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Podnadpis</Label>
-              <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+              <Label>Název článku</Label>
+              <Input className="rounded-xl" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label>Text článku</Label>
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-[250px]" required />
+              <Label>Obsah</Label>
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-[250px] rounded-xl" required />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
-              <div className="space-y-2">
-                <Label>Titulní obrázek</Label>
-                {existingCoverImage && <p className="text-[10px] text-blue-600 font-medium">Aktuálně uložen obrázek</p>}
-                <Input type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Přidat další přílohy</Label>
-                <Input type="file" multiple onChange={(e) => setAttachments(Array.from(e.target.files || []))} />
-              </div>
+            <div className="space-y-2">
+              <Label>Titulní obrázek</Label>
+              {existingPicture && <p className="text-[10px] text-blue-600 font-bold italic">Obrázek je nastaven</p>}
+              <Input className="rounded-xl" type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
             </div>
-
-            <div className="flex gap-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => router.back()} 
-                className="w-1/3 h-12 rounded-xl"
-              >
-                Zrušit
-              </Button>
-              <Button 
-                disabled={isSubmitting} 
-                className="w-2/3 bg-blue-600 h-12 text-lg rounded-xl shadow-lg shadow-blue-200"
-              >
-                {isSubmitting ? "Ukládám změny..." : "Uložit změny"}
+<div className="space-y-2 pt-2 border-t mt-4">
+              <Label className="text-blue-700 font-bold">Stav článku</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="rounded-xl bg-blue-50 border-blue-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PUBLISHED">Aktivní (Viditelný pro všechny)</SelectItem>
+                  <SelectItem value="DRAFT">Koncept (Uvidíte jen vy)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-4 pt-6">
+              <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1 rounded-xl">Zrušit</Button>
+              <Button disabled={isSubmitting} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md">
+                {isSubmitting ? "Ukládám..." : "Uložit změny"}
               </Button>
             </div>
           </form>

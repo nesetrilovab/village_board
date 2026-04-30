@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client"; // PŘIDÁN IMPORT
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -38,12 +39,11 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
           setAdType(data.ad_type || "ITEM");
           setTitle(data.title || "");
           setItemName(data.item_name || "");
-          // Ošetření názvu pole: bere description nebo text
           setDescription(data.description || data.text || "");
           setPrice(data.price ? data.price.toString() : "");
           setLocation(data.location || "");
           setExistingPicture(data.picture || data.cover_image || "");
-          setStatus(data.status || "PUBLISHED"); // Načtení statusu z DB
+          setStatus(data.status || "PUBLISHED");
         }
       } catch (err) {
         console.error("Chyba při načítání inzerátu:", err);
@@ -59,14 +59,14 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
     setIsSubmitting(true);
 
     try {
-      // 1. Vyřešení obrázku (nový vs původní)
+      // 1. Vyřešení obrázku (Direct Upload - opraveno)
       let coverUrl = existingPicture;
       if (coverImage) {
-        const formData = new FormData();
-        formData.append("file", coverImage);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        coverUrl = data.url;
+        const newBlob = await upload(coverImage.name, coverImage, {
+          access: 'public',
+          handleUploadUrl: '/api/upload', 
+        });
+        coverUrl = newBlob.url;
       }
 
       // 2. Odeslání změn (PATCH)
@@ -83,12 +83,12 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
           location: location,
           picture: coverUrl,
           cover_image: coverUrl,    
-          status: status,           // Klíčové: Odesíláme aktuálně vybraný status
+          status: status,
         }),
       });
 
       if (res.ok) {
-        alert("Inzerát úspěšně upraven! ✨");
+        alert("Inzerát úspěšně upraven!");
         router.push(`/feed/${id}`);
         router.refresh();
       } else {
@@ -157,7 +157,6 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
               </div>
             </div>
 
-            {/* STATUS SEKCE */}
             <div className="space-y-2 pt-2 border-t mt-4">
               <Label className="text-yellow-700 font-bold">Stav inzerátu</Label>
               <Select value={status} onValueChange={setStatus}>

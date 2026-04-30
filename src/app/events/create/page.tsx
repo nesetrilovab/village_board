@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -10,11 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function EventForm() {
   const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [text, setText] = useState("");
-  const [address, setAddress] = useState("");
-  const [eventDate, setEventDate] = useState("");
-  const [status, setStatus] = useState("PUBLISHED"); // 1. Přidán stav pro status
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [date, setDate] = useState("");
+  const [organizer, setOrganizer] = useState("");
+  const [status, setStatus] = useState("PUBLISHED");
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,36 +26,34 @@ export default function EventForm() {
     try {
       let coverUrl = "";
       if (coverImage) {
-        const formData = new FormData();
-        formData.append("file", coverImage);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        coverUrl = data.url;
+        const newBlob = await upload(coverImage.name, coverImage, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        coverUrl = newBlob.url;
       }
 
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          title, 
-          subtitle, 
-          text, 
-          address, 
-          event_date: eventDate, 
-          cover_image: coverUrl,
-          status: status // 2. Odesíláme zvolený status (DRAFT nebo PUBLISHED)
+        body: JSON.stringify({
+          title,
+          description,
+          location,
+          event_date: new Date(date).toISOString(),
+          organizer,
+          image_url: coverUrl,
+          status,
+          author_id: "616a8870-e898-486a-bff8-7853cdbf786b",
         }),
       });
 
       if (res.ok) {
-        alert(status === "DRAFT" ? "Událost uložena jako koncept! 📁" : "Událost byla vytvořena! 📅");
-        // Reset formuláře
-        setTitle(""); setSubtitle(""); setText(""); setAddress(""); setEventDate(""); setCoverImage(null);
-        setStatus("PUBLISHED");
+        alert(status === "DRAFT" ? "Událost uložena do konceptů!" : "Událost vytvořena!");
+        setTitle(""); setDescription(""); setLocation(""); setDate(""); setOrganizer(""); setCoverImage(null);
       }
     } catch (err) {
-      console.error(err);
-      alert("Něco se nepovedlo.");
+      alert("Chyba při ukládání události.");
     } finally {
       setIsSubmitting(false);
     }
@@ -62,60 +61,58 @@ export default function EventForm() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
-      <Card className="w-full max-w-2xl shadow-lg rounded-2xl border-green-200">
+      <Card className="w-full max-w-2xl shadow-lg rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-green-800">Nová událost / Akce</CardTitle>
+          <CardTitle className="text-2xl font-bold">Nová událost</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* 3. Výběr statusu */}
-            <div className="space-y-2 p-4 bg-green-50 rounded-xl border border-green-100">
-              <Label className="text-green-800 font-semibold">Viditelnost akce</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="bg-white border-green-200">
-                  <SelectValue placeholder="Vyberte status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PUBLISHED">Zveřejnit ihned (Viditelné pro všechny)</SelectItem>
-                  <SelectItem value="DRAFT">Uložit jako koncept (Pouze pro vás)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Název akce</Label>
-              <Input placeholder="Např. Pálení čarodějnic" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Krátké motto / podnadpis</Label>
-              <Input placeholder="Např. Tradiční setkání u potoka" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Viditelnost (Status)</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PUBLISHED">Zveřejnit akci</SelectItem>
+                    <SelectItem value="DRAFT">Uložit koncept</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Datum a čas konání</Label>
+                <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Kdy se akce koná?</Label>
-                <Input type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
+                <Label>Lokalita</Label>
+                <Input placeholder="Kde se akce koná?" value={location} onChange={(e) => setLocation(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label>Místo konání (Adresa)</Label>
-                <Input placeholder="Např. Fotbalové hřiště" value={address} onChange={(e) => setAddress(e.target.value)} required />
+                <Label>Pořadatel / Organizátor</Label>
+                <Input placeholder="Např. SDH Lhota" value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Popis akce</Label>
-              <Textarea placeholder="Podrobný program, vstupné..." value={text} onChange={(e) => setText(e.target.value)} className="min-h-[150px]" required />
+              <Label>Název události</Label>
+              <Input placeholder="Název akce" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label>Plakát / Úvodní fotka</Label>
+              <Label>Podrobnosti o akci</Label>
+              <Textarea placeholder="Program, vstupné, atd..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px]" required />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Plakát / Ilustrační foto</Label>
               <Input type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
             </div>
 
-            <Button disabled={isSubmitting} className="w-full mt-4 bg-green-600 hover:bg-green-700">
-              {isSubmitting ? "Ukládám..." : status === "DRAFT" ? "Uložit jako rozpracované" : "Vytvořit událost"}
+            <Button disabled={isSubmitting} className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white">
+              {isSubmitting ? "Ukládám..." : status === "DRAFT" ? "Uložit koncept" : "Vytvořit událost"}
             </Button>
           </form>
         </CardContent>
