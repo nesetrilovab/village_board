@@ -1,33 +1,28 @@
-import { put } from "@vercel/blob";
-import { NextResponse } from "next/server";
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(request: Request): Promise<NextResponse> {
+  const body = (await request.json()) as HandleUploadBody;
+
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-
-    // 1. Základní kontrola souboru
-    if (!file || !file.name) {
-      return NextResponse.json(
-        { error: "Nebyl nahrán žádný platný soubor" },
-        { status: 400 }
-      );
-    }
-
-    // 2. Nahrání do Vercel Blob
-    // put() automaticky vyřeší unikátní název (přidá náhodný hash)
-    // a nahradí nebezpečné znaky v názvu souboru.
-    const blob = await put(file.name, file, {
-      access: "public", // Aby byly fotky vidět na webu
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        tokenPayload: JSON.stringify({}), // Tady můžeš později přidat ID uživatele
+      }),
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        // Tato část se spustí, až bude soubor bezpečně v cloudu
+        console.log('Upload dokončen:', blob.url);
+      },
     });
 
-    // 3. Vrácení URL adresy
-    // Vercel Blob vrací objekt, kde 'url' je přímo link na jejich CDN
-    // Např: https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-xyz.jpg
-    return NextResponse.json({ url: blob.url });
-
+    return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error("BLOB UPLOAD ERROR:", error);
-    return NextResponse.json({ error: "Nahrávání do cloudu selhalo" }, { status: 500 });
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 400 }
+    );
   }
 }

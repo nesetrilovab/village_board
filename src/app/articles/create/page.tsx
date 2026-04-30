@@ -1,7 +1,6 @@
 "use client";
-import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { useState } from "react";
+import { upload } from "@vercel/blob/client"; // NOVÝ IMPORT
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +12,7 @@ export default function CreateArticlePage() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [text, setText] = useState("");
-  const [status, setStatus] = useState("DRAFT"); // Velká písmena
+  const [status, setStatus] = useState("DRAFT");
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,28 +22,29 @@ export default function CreateArticlePage() {
     setIsSubmitting(true);
 
     try {
-      // 1. Upload Cover Image
+      // 1. Upload Cover Image (Directly to Vercel Blob)
       let coverUrl = "";
       if (coverImage) {
-        const formData = new FormData();
-        formData.append("file", coverImage); // Ujisti se, že api/upload čeká "file"
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        coverUrl = data.url;
+        // Místo fetchi voláme přímo upload, který obejde 4.5MB limit
+        const newBlob = await upload(coverImage.name, coverImage, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+        });
+        coverUrl = newBlob.url;
       }
 
-      // 2. Upload Multi-Attachments
+      // 2. Upload Multi-Attachments (Directly to Vercel Blob)
       const uploadedAttachments = await Promise.all(
         attachments.map(async (file) => {
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch("/api/upload", { method: "POST", body: formData });
-          const data = await res.json();
-          return { filename: file.name, url: data.url };
+          const newBlob = await upload(file.name, file, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+          });
+          return { filename: file.name, url: newBlob.url };
         })
       );
 
-      // 3. Create Article
+      // 3. Create Article (Už jen posíláme URL adresy do DB)
       const response = await fetch("/api/articles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,18 +55,18 @@ export default function CreateArticlePage() {
           status,
           author_id: "616a8870-e898-486a-bff8-7853cdbf786b", // TODO: replace with real auth
           cover_image: coverUrl,
-          attachments: uploadedAttachments, // Teď už posíláme reálná data
+          attachments: uploadedAttachments,
           date_of_release: new Date().toISOString(),
         }),
       });
 
       if (response.ok) {
         alert("Článek vytvořen 🎉");
-        // Reset formuláře
-        setTitle(""); setSubtitle(""); setText(""); setAttachments([]);
+        setTitle(""); setSubtitle(""); setText(""); setAttachments([]); setCoverImage(null);
       }
     } catch (err) {
-      alert("Něco se nepovedlo.");
+      console.error(err);
+      alert("Něco se nepovedlo při nahrávání.");
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +110,7 @@ export default function CreateArticlePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-4">
               <div className="space-y-2">
                 <Label>Titulní obrázek</Label>
-                <Input type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
+                <Input type="file" accept="image/*" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
               </div>
               <div className="space-y-2">
                 <Label>Přílohy (PDF, dokumenty...)</Label>
@@ -118,7 +118,7 @@ export default function CreateArticlePage() {
               </div>
             </div>
 
-            <Button disabled={isSubmitting} className="w-full bg-blue-600 h-12 text-lg">
+            <Button disabled={isSubmitting} className="w-full bg-blue-600 h-12 text-lg text-white hover:bg-blue-700">
               {isSubmitting ? "Ukládám..." : "Vytvořit článek"}
             </Button>
           </form>
