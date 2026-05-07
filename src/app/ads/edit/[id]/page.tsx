@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client"; // PŘIDÁN IMPORT
+import { upload } from "@vercel/blob/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Načtení dat inzerátu při startu
+  // 1. Načtení dat inzerátu (Používáme /api/feed/ protože to funguje)
   useEffect(() => {
     const fetchAd = async () => {
       try {
@@ -39,6 +39,7 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
           setAdType(data.ad_type || "ITEM");
           setTitle(data.title || "");
           setItemName(data.item_name || "");
+          // Sjednocení popisu (zkoušíme oba názvy polí z DB)
           setDescription(data.description || data.text || "");
           setPrice(data.price ? data.price.toString() : "");
           setLocation(data.location || "");
@@ -59,7 +60,7 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
     setIsSubmitting(true);
 
     try {
-      // 1. Vyřešení obrázku (Direct Upload - opraveno)
+      // 1. Vyřešení obrázku (Vercel Blob)
       let coverUrl = existingPicture;
       if (coverImage) {
         const newBlob = await upload(coverImage.name, coverImage, {
@@ -69,7 +70,7 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
         coverUrl = newBlob.url;
       }
 
-      // 2. Odeslání změn (PATCH)
+      // 2. Odeslání změn (PATCH na /api/feed/ – sjednoceno s články)
       const res = await fetch(`/api/feed/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -77,11 +78,11 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
           ad_type: adType,
           title: title,
           item_name: itemName,
-          description: description, 
+          description: description, // posíláme obojí kvůli Prisma schématu
           text: description,        
           price: price ? parseFloat(price) : null,
           location: location,
-          picture: coverUrl,
+          picture: coverUrl,      // posíláme obojí pro jistotu
           cover_image: coverUrl,    
           status: status,
         }),
@@ -103,7 +104,7 @@ export default function EditAdPage({ params }: { params: Promise<{ id: string }>
     }
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Načítání inzerátu...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-500">Načítání inzerátu...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
