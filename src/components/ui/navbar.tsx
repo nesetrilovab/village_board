@@ -60,7 +60,7 @@ export default function Navbar() {
             /* Zobrazení pro PŘIHLÁŠENÉHO uživatele */
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-slate-600 italic">
-                {user.email} {user.role === "ADMIN" && "⭐"}
+                {user.email} {user.role === "ADMIN" && ""}
               </span>
               <button 
                 onClick={handleLogout}

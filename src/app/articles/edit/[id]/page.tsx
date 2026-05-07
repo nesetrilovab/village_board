@@ -24,20 +24,23 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 1. Načtení dat (používáme /api/feed/ protože tam jsou data uložena)
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const res = await fetch(`/api/articles/${id}`);
+        const res = await fetch(`/api/feed/${id}`); 
+        
         if (res.ok) {
           const data = await res.json();
           setTitle(data.title || "");
           setSubtitle(data.subtitle || "");
-          setText(data.text || "");
+          // Pojistka pro různé názvy polí v DB
+          setText(data.text || data.description || data.content || "");
           setStatus(data.status || "PUBLISHED");
-          setExistingPicture(data.cover_image || "");
+          setExistingPicture(data.picture || data.cover_image || "");
         }
       } catch (err) {
-        console.error("Chyba při načítání článku:", err);
+        console.error("Chyba při načítání:", err);
       } finally {
         setIsLoading(false);
       }
@@ -45,6 +48,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
     fetchArticle();
   }, [id]);
 
+  // 2. Uložení změn
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -59,25 +63,38 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
         coverUrl = newBlob.url;
       }
 
-      const res = await fetch(`/api/articles/${id}`, {
+      // OPRAVA: Posíláme na stejnou adresu, odkud jsme načítali (/api/feed/)
+      const res = await fetch(`/api/feed/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, subtitle, text, status, cover_image: coverUrl }),
+        body: JSON.stringify({ 
+          title, 
+          subtitle, 
+          text: text,           // pro články
+          description: text,    // pojistka pro inzerátové schéma
+          status, 
+          picture: coverUrl,    // pojistka
+          cover_image: coverUrl // pro články
+        }),
       });
 
       if (res.ok) {
         alert("Článek úspěšně upraven!");
-        router.push(`/articles/${id}`);
+        router.push(`/feed/${id}`); 
         router.refresh();
+      } else {
+        const errorData = await res.json();
+        alert(`Chyba při ukládání: ${errorData.message || "Zkuste to znovu"}`);
       }
     } catch (err) {
-      alert("Něco se nepovedlo.");
+      console.error(err);
+      alert("Něco se nepovedlo při komunikaci se serverem.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Načítání článku...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-500 font-medium">Načítání článku...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
@@ -87,17 +104,14 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              
-              <div className="space-y-2">
-                <Label>Podnadpis</Label>
-                <Input className="rounded-xl" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>Název článku</Label>
               <Input className="rounded-xl" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Podnadpis</Label>
+              <Input className="rounded-xl" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
             </div>
 
             <div className="space-y-2">
@@ -105,26 +119,32 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
               <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-[250px] rounded-xl" required />
             </div>
 
-            <div className="space-y-2">
-              <Label>Titulní obrázek</Label>
-              {existingPicture && <p className="text-[10px] text-blue-600 font-bold italic">Obrázek je nastaven</p>}
-              <Input className="rounded-xl" type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Titulní obrázek</Label>
+                {existingPicture && <p className="text-[10px] text-blue-600 font-bold italic">Obrázek je již nastaven</p>}
+                <Input className="rounded-xl cursor-pointer" type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-blue-700 font-bold">Stav článku</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="rounded-xl bg-blue-50 border-blue-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PUBLISHED">Aktivní (Veřejný)</SelectItem>
+                    <SelectItem value="DRAFT">Koncept (Soukromý)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-<div className="space-y-2 pt-2 border-t mt-4">
-              <Label className="text-blue-700 font-bold">Stav článku</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="rounded-xl bg-blue-50 border-blue-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PUBLISHED">Aktivní (Viditelný pro všechny)</SelectItem>
-                  <SelectItem value="DRAFT">Koncept (Uvidíte jen vy)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="flex gap-4 pt-6">
-              <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1 rounded-xl">Zrušit</Button>
-              <Button disabled={isSubmitting} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md">
+              <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1 rounded-xl">
+                Zrušit
+              </Button>
+              <Button disabled={isSubmitting} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all">
                 {isSubmitting ? "Ukládám..." : "Uložit změny"}
               </Button>
             </div>
