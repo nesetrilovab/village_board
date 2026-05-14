@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma"; // Uprav cestu ke svému prisma klientovi
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16",
+  apiVersion: "2026-04-22.dahlia",
 });
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
           where: { id: adId },
           data: { status: "PUBLISHED" },
         });
-        
+
         return NextResponse.json({ received: true });
       } catch (error) {
         console.error("Chyba při aktualizaci databáze:", error);
