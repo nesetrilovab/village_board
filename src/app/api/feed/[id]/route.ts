@@ -137,9 +137,7 @@ export async function PUT(
           ad_type: ad_type || "ITEM",
           item_name: item_name || null,
           text: text,
-          description: text, 
           address: address || null,
-          location: address || null,
           price: price !== undefined && price !== null ? parseFloat(price.toString()) : null,
           status: status || "DRAFT",
           attachments: attachmentsData
@@ -153,77 +151,6 @@ export async function PUT(
   } catch (error: any) {
     console.error("Backend error PUT /api/feed/[id]:", error);
     return NextResponse.json({ message: "Internal server error", error: error.message }, { status: 500 });
-  }
-}
-
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const session = await getSession();
-
-    if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
-
-    const article = await prisma.articles.findUnique({ where: { id } });
-    const event = await prisma.events.findUnique({ where: { id } });
-    const ad = await prisma.ads.findUnique({ where: { id } });
-
-    const item = article || event || ad;
-    if (!item) return NextResponse.json({ error: "Post could not be found" }, { status: 404 });
-
-    if (item.author_id !== session.userId && session.role !== "ADMIN") {
-      return NextResponse.json({ error: "You do not have the appropriate rights" }, { status: 403 });
-    }
-
-    if (article) {
-      const updated = await prisma.articles.update({
-        where: { id },
-        data: {
-          title: body.title,
-          subtitle: body.subtitle,
-          text: body.text || body.description,
-          status: body.status,
-        },
-      });
-      return NextResponse.json(updated);
-    }
-
-    if (event) {
-      const updated = await prisma.events.update({
-        where: { id },
-        data: {
-          title: body.title,
-          subtitle: body.subtitle,
-          text: body.text || body.description,
-          address: body.address,
-          event_date: body.event_date ? new Date(body.event_date) : undefined,
-          status: body.status,
-        },
-      });
-      return NextResponse.json(updated);
-    }
-
-    if (ad) {
-      const updated = await prisma.ads.update({
-        where: { id },
-        data: {
-          title: body.title,
-          ad_type: body.ad_type,
-          item_name: body.item_name,
-          text: body.text || body.description,
-          description: body.description || body.text,
-          price: body.price ? parseFloat(body.price.toString()) : null,
-          address: body.address || body.location,
-          location: body.location || body.address,
-          status: body.status,
-        },
-      });
-      return NextResponse.json(updated);
-    }
-
-  } catch (error: any) {
-    console.error("PATCH Error:", error);
-    return NextResponse.json({ error: "Error while processing" }, { status: 500 });
   }
 }
 
