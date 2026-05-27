@@ -9,7 +9,6 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
 
-  // Načtení uživatele při načtení stránky
   useEffect(() => {
     async function checkUser() {
       const res = await fetch("/api/auth/me");
@@ -19,10 +18,9 @@ export default function Navbar() {
       }
     }
     checkUser();
-  }, [pathname]); // Zkontroluje uživatele při každé změně stránky
+  }, [pathname]); 
 
   const handleLogout = async () => {
-    // Pro logout stačí zavolat endpoint, který smaže cookie, nebo ji smazat tady
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     router.push("/login");
@@ -38,26 +36,24 @@ export default function Navbar() {
     <nav className="w-full bg-white border-b shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         
-        <Link href="/feed" className="text-2xl font-black tracking-tighter text-blue-600">
-          Village<span className="text-slate-800">Board</span>
+        <Link href="/feed" className="text-2xl font-black tracking-tighter text-slate-800">
+          VillageBoard
         </Link>
 
-        {/* Hlavní Navigace - Viditelná jen pro přihlášené (volitelně) */}
         <div className="hidden md:flex gap-8 text-sm font-medium">
-          <Link href="/feed" className={linkStyle("/feed")}>Nástěnka</Link>
+          <Link href="/feed" className={linkStyle("/feed")}>Board</Link>
           {user && (
             <>
-              <Link href="/articles/create" className={linkStyle("/articles/create")}>Nový článek</Link>
-              <Link href="/events/create" className={linkStyle("/events/create")}>Akce</Link>
-              <Link href="/ads/create" className={linkStyle("/ads/create")}>Inzerát</Link>
-              <Link href="/drafts" className={linkStyle("/drafts")}>Koncepty</Link>
+              <Link href="/articles/create" className={linkStyle("/articles/create")}>Article</Link>
+              <Link href="/events/create" className={linkStyle("/events/create")}>Event</Link>
+              <Link href="/ads/create" className={linkStyle("/ads/create")}>Advertisement</Link>
+              <Link href="/drafts" className={linkStyle("/drafts")}>Drafts</Link>
             </>
           )}
         </div>
 
         <div className="flex items-center gap-4">
           {user ? (
-            /* Zobrazení pro PŘIHLÁŠENÉHO uživatele */
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-slate-600 italic">
                 {user.email} {user.role === "ADMIN" && ""}
@@ -66,15 +62,14 @@ export default function Navbar() {
                 onClick={handleLogout}
                 className="text-sm font-semibold text-red-500 hover:text-red-700 transition"
               >
-                Odhlásit se
+                Log out
               </button>
             </div>
           ) : (
-            /* Zobrazení pro NEPŘIHLÁŠENÉHO */
             <>
-              <Link href="/login" className={linkStyle("/login")}>Přihlásit se</Link>
+              <Link href="/login" className={linkStyle("/login")}>Log in</Link>
               <Link href="/register" className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition">
-                Registrace
+                Register
               </Link>
             </>
           )}

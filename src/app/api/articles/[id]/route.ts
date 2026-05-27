@@ -21,7 +21,7 @@ export async function GET(
 
     if (!article) {
       return NextResponse.json(
-        { message: "Článek nebyl nalezen" },
+        { message: "Article could not be found" },
         { status: 404 }
       );
     }
@@ -30,13 +30,13 @@ export async function GET(
   } catch (error: any) {
     console.error("GET /api/articles/[id] error:", error);
     return NextResponse.json(
-      { message: "Chyba při načítání detailu článku", detail: error.message },
+      { message: "Error while loading article", detail: error.message },
       { status: 500 }
     );
   }
 }
 
-// 2. PATCH: Aktualizace článku a správa jeho příloh
+// 2. PATCH
 
 export async function PATCH(
   request: Request,
@@ -83,7 +83,7 @@ export async function PATCH(
   } catch (error: any) {
     console.error("PATCH /api/articles/[id] error:", error);
     return NextResponse.json(
-      { message: "Chyba při úpravě článku", detail: error.message },
+      { message: "Error while processing article", detail: error.message },
       { status: 500 }
     );
   }
@@ -103,11 +103,11 @@ export async function DELETE(
       where: { id: id },
     });
 
-    return NextResponse.json({ message: "Článek byl úspěšně smazán" });
+    return NextResponse.json({ message: "Deleted successfully." });
   } catch (error: any) {
     console.error("DELETE /api/articles/[id] error:", error);
     return NextResponse.json(
-      { message: "Chyba při mazání článku", detail: error.message },
+      { message: "Error while deleting.", detail: error.message },
       { status: 500 }
     );
   }

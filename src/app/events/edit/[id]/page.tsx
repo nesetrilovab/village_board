@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { Input } from "@/components/ui/input";
@@ -10,158 +10,189 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function EditEventPage() {
-  const params = useParams();
-  const id = params?.id;
+export default function EditEventForm() {
   const router = useRouter();
+  const { id } = useParams();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [organizer, setOrganizer] = useState("");
+  const [text, setText] = useState("");
+  const [address, setAddress] = useState("");
   const [date, setDate] = useState("");
+  const [organizer, setOrganizer] = useState("");
   const [status, setStatus] = useState("PUBLISHED");
-  const [existingPicture, setExistingPicture] = useState("");
-
-  const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-
-    const fetchEvent = async () => {
+    async function loadEventData() {
       try {
         const res = await fetch(`/api/feed/${id}`);
-        if (res.ok) {
-          const data = await res.json();
+        if (!res.ok) throw new Error("Error while loading event");
+        
+        const data = await res.json();
+        
+        setTitle(data.title || "");
+        setText(data.text || "");
+        setAddress(data.address || "");
+        setOrganizer(data.subtitle || "");
+        setStatus(data.status || "PUBLISHED");
+        setExistingAttachments(data.attachments || []);
 
-          setTitle(data.title || "");
-          setDescription(data.text || data.description || "");
-          setLocation(data.address || data.location || "");
-          setOrganizer(data.subtitle || data.organizer || "");
-          setStatus(data.status || "PUBLISHED");
-          setExistingPicture(data.cover_image || data.picture || "");
-
-          if (data.event_date) {
-            setDate(new Date(data.event_date).toISOString().slice(0, 16));
-          }
+        if (data.event_date) {
+          const localDate = new Date(data.event_date);
+          const offset = localDate.getTimezoneOffset() * 60000;
+          const adjustedDate = new Date(localDate.getTime() - offset);
+          setDate(adjustedDate.toISOString().slice(0, 16));
         }
       } catch (err) {
-        console.error("Chyba při načítání události:", err);
+        console.error(err);
+        alert("Could not load event data.");
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchEvent();
+    }
+    loadEventData();
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
     setIsSubmitting(true);
 
     try {
-      let coverUrl = existingPicture;
-      if (coverImage) {
-        const newBlob = await upload(coverImage.name, coverImage, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-          // @ts-ignore
-          addRandomSuffix: true, // Prevence konfliktů, kterou jsme řešili
-        });
-        coverUrl = newBlob.url;
+      const attachmentsArray = [...existingAttachments];
+
+      if (selectedFiles && selectedFiles.length > 0) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const newBlob = await upload(file.name, file, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+          });
+          
+          attachmentsArray.push({
+            filename: file.name,
+            url: newBlob.url,
+          });
+        }
       }
 
       const res = await fetch(`/api/feed/${id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title.trim(),
-          subtitle: organizer || null,
-          text: description,
-          address: location.trim() || "",
-          status,
-          cover_image: coverUrl,
+          title,
+          subtitle: organizer || null, 
+          
+          text, 
+          address: address || null, 
           event_date: new Date(date).toISOString(),
+          status,
+          attachments: attachmentsArray, 
         }),
       });
 
-      if (res.ok) {
-        alert("Událost upravena!");
-        router.push(`/feed/${id}`);
-        router.refresh();
-      } else {
+      if (!res.ok) {
         const errData = await res.json();
-        alert(`Chyba při ukládání: ${errData.message || "Server odmítl požadavek"}`);
+        throw new Error(errData.message || "Server returned an error");
       }
-    } catch (err) {
-      alert("Chyba při komunikaci se serverem.");
+
+      router.push(`/feed/${id}`);
+      router.refresh();
+
+    } catch (err: any) {
+      console.error("Error while processing form:", err);
+      alert(`Chyba: ${err.message || "Something went wrong."}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Načítání události...</div>;
+  if (isLoading) {
+    return <div className="min-h-screen bg-slate-100 flex justify-center items-center text-slate-500">Loading event details...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
-      <Card className="w-full max-w-2xl shadow-lg rounded-2xl border-t-8 border-t-green-600">
+      <Card className="w-full max-w-2xl shadow-lg rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-slate-800 text-center">Upravit událost</CardTitle>
+          <CardTitle className="text-2xl font-bold">Edit event</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
 
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Datum a čas</Label>
-                <Input type="datetime-local" className="rounded-xl" value={date} onChange={(e) => setDate(e.target.value)} required />
+                <Label>Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PUBLISHED">Publish</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Date and Time</Label>
+                <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Organizer</Label>
+                <Input value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Lokalita</Label>
-              <Input className="rounded-xl" value={location} onChange={(e) => setLocation(e.target.value)} required />
+              <Label>Title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label>Pořadatel / Organizátor</Label>
-              <Input className="rounded-xl" value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
+              <Label>Details</Label>
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-30" required />
             </div>
 
             <div className="space-y-2">
-              <Label>Název události</Label>
-              <Input className="rounded-xl" value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <Label>Add attachments</Label>
+              <Input 
+                type="file" 
+                multiple 
+                onChange={(e) => setSelectedFiles(e.target.files)} 
+              />
+              
+              {existingAttachments.length > 0 && (
+                <p className="text-xs text-emerald-600 font-medium mt-1">
+                  Current attachments saved: {existingAttachments.length}
+                </p>
+              )}
+
+              {selectedFiles && selectedFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  New attachments selected: {selectedFiles.length}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Popis akce</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-30 rounded-xl" required />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Změnit plakát</Label>
-              {existingPicture && <p className="text-[10px] text-green-600 font-bold italic">Plakát je nahrán</p>}
-              <Input className="rounded-xl" type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
-            </div>
-            <div className="space-y-2 pt-2 border-t mt-4">
-              <Label className="text-green-700 font-bold">Stav události</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="rounded-xl bg-green-50 border-green-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PUBLISHED">Aktivní (Viditelný pro všechny)</SelectItem>
-                  <SelectItem value="DRAFT">Koncept (Uvidíte jen vy)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-4 pt-6">
-              <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1 rounded-xl">Zrušit</Button>
-              <Button disabled={isSubmitting} className="flex-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md">
-                {isSubmitting ? "Ukládám..." : "Uložit změny"}
+            <div className="flex gap-3 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => router.back()} 
+                className="w-1/3"
+              >
+                Cancel
+              </Button>
+              <Button disabled={isSubmitting} className="w-2/3 bg-green-600 hover:bg-green-700 text-white">
+                {isSubmitting ? "Processing changes..." : "Update event"}
               </Button>
             </div>
           </form>

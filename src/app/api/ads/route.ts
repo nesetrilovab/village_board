@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 
-// 1. GET: Načtení všech inzerátů včetně jejich příloh
 
 export async function GET() {
   try {
@@ -19,21 +18,20 @@ export async function GET() {
   } catch (error: any) {
     console.error("GET /api/ads error:", error);
     return NextResponse.json(
-      { message: "Chyba při načítání inzerátů", detail: error.message },
+      { message: "Error while loading advertisements", detail: error.message },
       { status: 500 }
     );
   }
 }
 
 
-// 2. POST: Vytvoření inzerátu včetně uložení příloh
 
 export async function POST(req: Request) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
-        { message: "Pro vytvoření inzerátu se musíte přihlásit." },
+        { message: "To create an advertisement, you have to be logged in." },
         { status: 401 }
       );
     }
@@ -72,7 +70,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("POST /api/ads error:", error);
     return NextResponse.json(
-      { message: "Chyba při vytváření inzerátu", detail: error.message },
+      { message: "Error while loading advertisement", detail: error.message },
       { status: 500 }
     );
   }

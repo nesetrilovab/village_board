@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 
-// 1. GET: Načtení detailu inzerátu včetně jeho příloh
 
 export async function GET(
   request: Request,
@@ -21,7 +20,7 @@ export async function GET(
 
     if (!ad) {
       return NextResponse.json(
-        { message: "Inzerát nebyl nalezen" },
+        { message: "Advertisement could not be found" },
         { status: 404 }
       );
     }
@@ -30,14 +29,12 @@ export async function GET(
   } catch (error: any) {
     console.error("GET /api/ads/[id] error:", error);
     return NextResponse.json(
-      { message: "Chyba při načítání detailu inzerátu", detail: error.message },
+      { message: "Error while loading advertisement", detail: error.message },
       { status: 500 }
     );
   }
 }
 
-
-// 2. PATCH: Aktualizace inzerátu a správa jeho příloh
 
 export async function PATCH(
   request: Request,
@@ -64,12 +61,11 @@ export async function PATCH(
           title,
           item_name: item_name || null,
           price: price ? Number(price) : null,
-          text, // Nový sjednocený název
+          text,
           address: address || null, 
           status: status?.toUpperCase() || "DRAFT",
           date_of_release: status?.toUpperCase() === "PUBLISHED" ? new Date() : null,
           
-          // Pokud máme nové přílohy, vytvoříme je v tabulce attachments
           attachments: attachments && Array.isArray(attachments) ? {
             create: attachments.map((file: { filename: string; url: string }) => ({
               filename: file.filename,
@@ -87,7 +83,7 @@ export async function PATCH(
   } catch (error: any) {
     console.error("PATCH /api/ads/[id] error:", error);
     return NextResponse.json(
-      { message: "Chyba při úpravě inzerátu", detail: error.message },
+      { message: "Error while editing advertisement", detail: error.message },
       { status: 500 }
     );
   }

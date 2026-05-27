@@ -14,7 +14,7 @@ export default function FeedPage() {
         const data = await res.json();
         setFeed(data);
       } catch (error) {
-        console.error("Chyba při načítání feedu:", error);
+        console.error("Error while loading feed:", error);
       } finally {
         setIsLoading(false);
       }
@@ -27,9 +27,8 @@ export default function FeedPage() {
       <main className="p-6 max-w-[1600px] mx-auto">
         <header className="mb-10 text-center">
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            Vesnická nástěnka
+            Village Board
           </h1>
-          <p className="text-slate-500 text-sm mt-2">Aktuální dění, akce a inzerce z naší obce</p>
         </header>
 
         {isLoading ? (
@@ -47,7 +46,7 @@ export default function FeedPage() {
 ) : (
   <div className="text-center py-20 bg-white rounded-2xl shadow-sm max-w-md mx-auto border border-slate-100">
     <p className="text-slate-500 font-medium">
-      Zatím tu nejsou žádné příspěvky.
+      There are no posts yet.
     </p>
   </div>
 )}

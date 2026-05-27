@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
-  const router = useRouter(); // Inicializace routeru
+  const router = useRouter(); 
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,7 +22,7 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Hesla se neshodují.");
+      setError("Passwords do not match.");
       return;
     }
 
@@ -38,17 +38,14 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Registrace se nezdařila.");
+        setError(data.message || "Registration was not successful.");
         return;
       }
 
-      // Úspěch!
       router.push("/login");
-      // Malý trik: alert dej až po pushi, nebo raději vůbec, 
-      // uživatel uvidí login stránku.
     } catch (err) {
       console.error(err);
-      setError("Něco se nepovedlo, zkuste to znovu.");
+      setError("Something went wrong.");
     } finally {
       setIsLoading(false);
     }
@@ -59,9 +56,9 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md shadow-xl rounded-3xl border-none">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-slate-900 text-center">
-            Vytvořit účet
+            Create account
           </CardTitle>
-          <p className="text-sm text-slate-500 text-center">Připojte se k naší obecní nástěnce</p>
+          <p className="text-sm text-slate-500 text-center">Join our village board!</p>
         </CardHeader>
 
         <CardContent>
@@ -73,10 +70,10 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-1">
-              <Label htmlFor="name">Jméno a příjmení</Label>
+              <Label htmlFor="name">Full name</Label>
               <Input
                 id="name"
-                placeholder="Jan Novák"
+                placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -88,7 +85,7 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="jan.novak@email.cz"
+                placeholder="john.doe@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -96,7 +93,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="password">Heslo</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -108,7 +105,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="confirmPassword">Potvrzení hesla</Label>
+              <Label htmlFor="confirmPassword">Password confirmation</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -124,11 +121,11 @@ export default function RegisterPage() {
               disabled={isLoading}
               className="w-full bg-blue-600 hover:bg-blue-700 h-11 mt-4"
             >
-              {isLoading ? "Vytvářím účet..." : "Zaregistrovat se"}
+              {isLoading ? "Creating account..." : "Register"}
             </Button>
 
             <p className="text-center text-sm text-slate-500 mt-2">
-              Už máte účet? <a href="/login" className="text-blue-600 hover:underline font-medium">Přihlaste se</a>
+              Already have an account? <a href="/login" className="text-blue-600 hover:underline font-medium">Log in</a>
             </p>
           </form>
         </CardContent>

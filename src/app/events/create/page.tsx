@@ -57,7 +57,7 @@ export default function EventForm() {
       });
 
       if (res.ok) {
-        alert(status === "DRAFT" ? "Událost uložena do konceptů!" : "Událost vytvořena!");
+        alert(status === "DRAFT" ? "Event saved to drafts!" : "Event created!");
         
         setTitle(""); 
         setText(""); 
@@ -67,11 +67,11 @@ export default function EventForm() {
         setSelectedFiles(null);
       } else {
         const errData = await res.json();
-        alert(`Chyba při ukládání: ${errData.message}`);
+        alert(`Error while processing: ${errData.message}`);
       }
     } catch (err) {
-      console.error("Chyba při odesílání formuláře:", err);
-      alert("Chyba při ukládání události.");
+      console.error("Error while processing form:", err);
+      alert("Error while processing event.");
     } finally {
       setIsSubmitting(false);
     }
@@ -81,7 +81,7 @@ export default function EventForm() {
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
       <Card className="w-full max-w-2xl shadow-lg rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Nová událost</CardTitle>
+          <CardTitle className="text-2xl font-bold">New event</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,40 +92,40 @@ export default function EventForm() {
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PUBLISHED">Zveřejnit akci</SelectItem>
-                    <SelectItem value="DRAFT">Uložit koncept</SelectItem>
+                    <SelectItem value="PUBLISHED">Publish</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Datum a čas konání</Label>
+                <Label>Date and Time</Label>
                 <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Adresa</Label>
+                <Label>Address</Label>
                 <Input  value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Pořadatel</Label>
+                <Label>Organizer</Label>
                 <Input  value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Název události</Label>
+              <Label>Title</Label>
               <Input  value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label>Podrobnosti</Label>
+              <Label>Details</Label>
               <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-30" required />
             </div>
 
             <div className="space-y-2">
-              <Label>Přílohy / Obrázky / Plakáty</Label>
+              <Label>Attachments</Label>
               <Input 
                 type="file" 
                 multiple 
@@ -133,13 +133,13 @@ export default function EventForm() {
               />
               {selectedFiles && selectedFiles.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Vybráno souborů: {selectedFiles.length}
+                  Number of attachments selected: {selectedFiles.length}
                 </p>
               )}
             </div>
 
             <Button disabled={isSubmitting} className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white">
-              {isSubmitting ? "Ukládám..." : status === "DRAFT" ? "Uložit koncept" : "Vytvořit událost"}
+              {isSubmitting ? "Processing..." : status === "DRAFT" ? "Save draft" : "Create event"}
             </Button>
           </form>
         </CardContent>

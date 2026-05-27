@@ -16,7 +16,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Inzerát: ${title}`,
+              name: `Advertisement: ${title}`,
             },
             unit_amount: 200,
           },

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 
-// 1. GET: Načtení všech událostí včetně jejich příloh
+// 1. GET
 
 export async function GET() {
   try {
@@ -21,21 +21,21 @@ export async function GET() {
   } catch (error: any) {
     console.error("GET /api/events error:", error);
     return NextResponse.json(
-      { message: "Chyba při načítání seznamu událostí", detail: error.message },
+      { message: "Error while loading events", detail: error.message },
       { status: 500 }
     );
   }
 }
 
 
-// 2. POST: Vytvoření nové události včetně uložení příloh
+// 2. POST
 
 export async function POST(request: Request) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
-        { message: "Pro vytvoření události se musíte přihlásit." },
+        { message: "To create an event, you have to be logged in." },
         { status: 401 }
       );
     }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("POST /api/events error:", error);
     return NextResponse.json(
-      { message: "Nepodařilo se vytvořit událost", detail: error.message },
+      { message: "Could not create event", detail: error.message },
       { status: 500 }
     );
   }

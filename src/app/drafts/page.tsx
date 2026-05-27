@@ -16,15 +16,15 @@ export default function DraftsPage() {
       });
   }, []);
 
-  if (loading) return <p className="p-10 text-center text-slate-500">Načítání vašich konceptů...</p>;
+  if (loading) return <p className="p-10 text-center text-slate-500">Loading drafts...</p>;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold mb-8 text-slate-900">Moje rozpracované koncepty</h1>
+      <h1 className="text-3xl font-bold mb-8 text-slate-900">Drafts</h1>
       
       {drafts.length === 0 ? (
         <div className="text-center py-20 border-2 border-dashed rounded-3xl">
-          <p className="text-slate-500">Nemáte žádné uložené koncepty.</p>
+          <p className="text-slate-500">You have no drafts.</p>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -42,10 +42,10 @@ export default function DraftsPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition">
-                    {draft.title || "Bez názvu"}
+                    {draft.title || "Unknown title"}
                   </h3>
                   <p className="text-sm text-slate-500">
-                    Vytvořeno: {new Date(draft.created_at).toLocaleDateString("cs-CZ")}
+                    Created at: {new Date(draft.created_at).toLocaleDateString("cs-CZ")}
                   </p>
                 </div>
               </div>

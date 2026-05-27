@@ -28,14 +28,14 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/feed"); // Předpokládám tuhle cestu
-        router.refresh(); // Důležité, aby se aktualizoval Navbar s přihlášeným uživatelem
+        router.push("/feed"); 
+        router.refresh(); 
       } else {
         const data = await res.json();
-        setError(data.message || "Špatný email nebo heslo");
+        setError(data.message || "Incorrect email or password");
       }
     } catch (err) {
-      setError("Server neodpovídá, zkuste to později.");
+      setError("Server is not responding, try again later.");
     } finally {
       setIsLoading(false);
     }
@@ -46,9 +46,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl rounded-3xl border-none">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-slate-900 text-center">
-            Vítejte zpět
+            Welcome
           </CardTitle>
-          <p className="text-sm text-slate-500 text-center">Přihlaste se ke svému účtu</p>
+          <p className="text-sm text-slate-500 text-center">Log in to your account</p>
         </CardHeader>
 
         <CardContent>
@@ -66,14 +66,14 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="jan.novak@obec.cz"
+                placeholder="john.doe@gmail.com"
                 className="h-11"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Heslo</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -90,11 +90,11 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-base font-semibold transition-all"
             >
-              {isLoading ? "Ověřování..." : "Přihlásit se"}
+              {isLoading ? "Verifying..." : "Log in"}
             </Button>
 
             <p className="text-center text-sm text-slate-500 mt-4">
-              Nemáte účet? <a href="/register" className="text-blue-600 hover:underline">Zaregistrujte se</a>
+              Do not have an account? <a href="/register" className="text-blue-600 hover:underline">Register</a>
             </p>
           </form>
         </CardContent>

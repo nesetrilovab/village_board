@@ -16,23 +16,20 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    // Ověření, že zpráva skutečně přišla od Stripe a nikdo ji nezfalšoval
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
   } catch (err: any) {
     console.error(`Webhook Error: ${err.message}`);
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
-  // Zpracování události "checkout.session.completed"
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const adId = session.metadata?.adId;
 
     if (adId) {
-      console.log(`✅ Platba úspěšná pro inzerát: ${adId}`);
+      console.log(`Payment successful for advertisement: ${adId}`);
 
       try {
-        // AKTUALIZACE DATABÁZE
         await prisma.ads.update({
           where: { id: adId },
           data: { status: "PUBLISHED" },
@@ -40,7 +37,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ received: true });
       } catch (error) {
-        console.error("Chyba při aktualizaci databáze:", error);
+        console.error("Error while updating database:", error);
         return NextResponse.json({ error: "Database update failed" }, { status: 500 });
       }
     }

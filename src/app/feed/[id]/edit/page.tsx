@@ -13,5 +13,5 @@ export default async function EditRedirectPage({ params }: { params: Promise<{ i
   const ad = await prisma.ads.findUnique({ where: { id } });
   if (ad) redirect(`/ads/edit/${id}`);
 
-  return <p>Příspěvek nenalezen.</p>;
+  return <p>Post could not be found.</p>;
 }

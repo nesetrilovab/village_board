@@ -10,7 +10,6 @@ export async function GET(
     const { id } = await params;
     const session = await getSession();
 
-    // Pomocná funkce pro kontrolu práv na zobrazení
     const canSee = (item: any) => {
       if (item.status === "PUBLISHED") return true;
       if (!session) return false;
@@ -18,7 +17,6 @@ export async function GET(
       return item.author_id === session.userId;
     };
 
-    // 1. Článek
     const article = await prisma.articles.findUnique({
       where: { id },
       include: { attachments: true, author: true },
@@ -28,7 +26,6 @@ export async function GET(
       return NextResponse.json({ ...article, type: "ARTICLE" });
     }
 
-    // 2. Akce
     const event = await prisma.events.findUnique({
       where: { id },
       include: { attachments: true, author: true },
@@ -38,20 +35,124 @@ export async function GET(
       return NextResponse.json({ ...event, type: "EVENT" });
     }
 
-    // 3. Inzerát
     const ad = await prisma.ads.findUnique({
       where: { id },
-      include: { author: true },
+      include: { attachments: true, author: true },
     });
     if (ad) {
       if (!canSee(ad)) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
       return NextResponse.json({ ...ad, type: "AD" });
     }
 
-    return NextResponse.json({ message: "Příspěvek nenalezen" }, { status: 404 });
+    return NextResponse.json({ message: "Post could not be found" }, { status: 404 });
   } catch (error) {
     console.error("DETAIL_FETCH_ERROR", error);
-    return NextResponse.json({ message: "Chyba na serveru" }, { status: 500 });
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const session = await getSession();
+
+    if (!session) return NextResponse.json({ message: "Not logged in" }, { status: 401 });
+
+    const article = await prisma.articles.findUnique({ where: { id } });
+    const event = await prisma.events.findUnique({ where: { id } });
+    const ad = await prisma.ads.findUnique({ where: { id } });
+
+    const item = article || event || ad;
+    if (!item) return NextResponse.json({ message: "Post could not be found" }, { status: 404 });
+
+    if (item.author_id !== session.userId && session.role !== "ADMIN") {
+      return NextResponse.json({ message: "You do not have the appropriate rights" }, { status: 403 });
+    }
+
+    const { 
+      title, 
+      subtitle, 
+      text, 
+      address, 
+      status, 
+      price, 
+      ad_type, 
+      item_name, 
+      event_date, 
+      attachments = [] 
+    } = body;
+
+    if (!title || !text) {
+      return NextResponse.json({ message: "Title and content are required." }, { status: 400 });
+    }
+
+    const attachmentsData = {
+      deleteMany: {}, 
+      create: attachments.map((att: any) => ({
+        filename: att.filename,
+        url: att.url
+      }))
+    };
+
+    if (article) {
+      const updatedArticle = await prisma.articles.update({
+        where: { id },
+        data: {
+          title,
+          subtitle: subtitle || null,
+          text,
+          address: address || null,
+          status: status || "PUBLISHED",
+          attachments: attachmentsData
+        },
+      });
+      return NextResponse.json(updatedArticle, { status: 200 });
+    }
+
+    if (event) {
+      const updatedEvent = await prisma.events.update({
+        where: { id },
+        data: {
+          title,
+          subtitle: subtitle || null, 
+          text,
+          address: address || null,
+          event_date: event_date ? new Date(event_date) : undefined,
+          status: status || "PUBLISHED",
+          attachments: attachmentsData
+        },
+      });
+      return NextResponse.json(updatedEvent, { status: 200 });
+    }
+
+    if (ad) {
+      const updatedAd = await prisma.ads.update({
+        where: { id },
+        data: {
+          title,
+          ad_type: ad_type || "ITEM",
+          item_name: item_name || null,
+          text: text,
+          description: text, 
+          address: address || null,
+          location: address || null,
+          price: price !== undefined && price !== null ? parseFloat(price.toString()) : null,
+          status: status || "DRAFT",
+          attachments: attachmentsData
+        },
+      });
+      return NextResponse.json(updatedAd, { status: 200 });
+    }
+
+    return NextResponse.json({ message: "Post type could not be recognized" }, { status: 400 });
+
+  } catch (error: any) {
+    console.error("Backend error PUT /api/feed/[id]:", error);
+    return NextResponse.json({ message: "Internal server error", error: error.message }, { status: 500 });
   }
 }
 
@@ -61,26 +162,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const session = await getSession();
 
-    // 1. Musí být přihlášen
-    if (!session) return NextResponse.json({ error: "Nepřihlášen" }, { status: 401 });
+    if (!session) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
 
-    // 2. Najdeme záznam kdekoli, abychom zjistili autora
     const article = await prisma.articles.findUnique({ where: { id } });
     const event = await prisma.events.findUnique({ where: { id } });
     const ad = await prisma.ads.findUnique({ where: { id } });
 
     const item = article || event || ad;
-    if (!item) return NextResponse.json({ error: "Příspěvek nenalezen" }, { status: 404 });
+    if (!item) return NextResponse.json({ error: "Post could not be found" }, { status: 404 });
 
-    // 3. Kontrola práv: Autor nebo Admin
-    const isOwner = item.author_id === session.userId;
-    const isAdmin = session.role === "ADMIN";
-
-    if (!isOwner && !isAdmin) {
-      return NextResponse.json({ error: "Nemáte oprávnění k úpravě" }, { status: 403 });
+    if (item.author_id !== session.userId && session.role !== "ADMIN") {
+      return NextResponse.json({ error: "You do not have the appropriate rights" }, { status: 403 });
     }
 
-    // 4. Samotný update podle typu
     if (article) {
       const updated = await prisma.articles.update({
         where: { id },
@@ -89,7 +183,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           subtitle: body.subtitle,
           text: body.text || body.description,
           status: body.status,
-          cover_image: body.cover_image || body.picture,
         },
       });
       return NextResponse.json(updated);
@@ -105,7 +198,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           address: body.address,
           event_date: body.event_date ? new Date(body.event_date) : undefined,
           status: body.status,
-          cover_image: body.cover_image || body.picture,
         },
       });
       return NextResponse.json(updated);
@@ -118,11 +210,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           title: body.title,
           ad_type: body.ad_type,
           item_name: body.item_name,
+          text: body.text || body.description,
           description: body.description || body.text,
           price: body.price ? parseFloat(body.price.toString()) : null,
-          location: body.location,
+          address: body.address || body.location,
+          location: body.location || body.address,
           status: body.status,
-          picture: body.picture || body.cover_image,
         },
       });
       return NextResponse.json(updated);
@@ -130,7 +223,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   } catch (error: any) {
     console.error("PATCH Error:", error);
-    return NextResponse.json({ error: "Chyba při ukládání" }, { status: 500 });
+    return NextResponse.json({ error: "Error while processing" }, { status: 500 });
   }
 }
 
@@ -142,26 +235,25 @@ export async function DELETE(
     const { id } = await params;
     const session = await getSession();
 
-    if (!session) return NextResponse.json({ message: "Nepřihlášen" }, { status: 401 });
+    if (!session) return NextResponse.json({ message: "Not logged in" }, { status: 401 });
 
     const article = await prisma.articles.findUnique({ where: { id } });
     const event = await prisma.events.findUnique({ where: { id } });
     const ad = await prisma.ads.findUnique({ where: { id } });
 
     const item = article || event || ad;
-    if (!item) return NextResponse.json({ message: "Nenalezeno" }, { status: 404 });
+    if (!item) return NextResponse.json({ message: "Not found." }, { status: 404 });
 
-    // Kontrola práv (Autor nebo Admin)
     if (item.author_id !== session.userId && session.role !== "ADMIN") {
-      return NextResponse.json({ message: "Nemáte oprávnění" }, { status: 403 });
+      return NextResponse.json({ message: "You do not have the appropriate rights" }, { status: 403 });
     }
 
     if (article) await prisma.articles.delete({ where: { id } });
     if (event) await prisma.events.delete({ where: { id } });
     if (ad) await prisma.ads.delete({ where: { id } });
 
-    return NextResponse.json({ message: "Smazáno" });
+    return NextResponse.json({ message: "Deleted successfully." });
   } catch (error) {
-    return NextResponse.json({ message: "Chyba při mazání" }, { status: 500 });
+    return NextResponse.json({ message: "Error while deleting." }, { status: 500 });
   }
 }

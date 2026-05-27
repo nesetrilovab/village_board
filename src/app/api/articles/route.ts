@@ -19,7 +19,7 @@ export async function GET() {
   } catch (error: any) {
     console.error("GET /api/articles error:", error);
     return NextResponse.json(
-      { message: "Chyba při načítání článků", detail: error.message }, 
+      { message: "Error while loading articles", detail: error.message }, 
       { status: 500 }
     );
   }
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
-        { message: "Pro tuto akci se musíte přihlásit" }, 
+        { message: "To create an article, you have to be logged in." }, 
         { status: 401 }
       );
     }
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("POST /api/articles error:", error);
     return NextResponse.json(
-      { message: "Chyba při ukládání článku", detail: error.message }, 
+      { message: "Error while processing article", detail: error.message }, 
       { status: 500 }
     );
   }

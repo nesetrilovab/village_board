@@ -56,10 +56,10 @@ export default function ArticleForm() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "Server vrátil chybu");
+        throw new Error(errorData.message || "Server returned an error");
       }
 
-      alert(status === "DRAFT" ? "Koncept uložen!" : "Článek publikován! 📰");
+      alert(status === "DRAFT" ? "Draft saved!" : "Article published!");
       
       setTitle(""); 
       setSubtitle(""); 
@@ -68,8 +68,8 @@ export default function ArticleForm() {
       setSelectedFiles(null);
 
     } catch (err: any) {
-      console.error("Chyba při odesílání:", err);
-      alert(`Chyba: ${err.message || "Něco se pokazelo"}`);
+      console.error("Error while processing:", err);
+      alert(`Chyba: ${err.message || "Something went wrong."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,7 +79,7 @@ export default function ArticleForm() {
     <div className="min-h-screen bg-slate-100 p-8 flex justify-center items-center">
       <Card className="w-full max-w-2xl shadow-lg rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Nový článek</CardTitle>
+          <CardTitle className="text-2xl font-bold">New article</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,13 +90,13 @@ export default function ArticleForm() {
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PUBLISHED">Zveřejnit článek</SelectItem>
-                    <SelectItem value="DRAFT">Uložit koncept</SelectItem>
+                    <SelectItem value="PUBLISHED">Publish</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Název článku</Label>
+                <Label>Title</Label>
               <Input  value={title} onChange={(e) => setTitle(e.target.value)} required />
 
               </div>
@@ -105,20 +105,20 @@ export default function ArticleForm() {
             
 
             <div className="space-y-2">
-              <Label>Podnadpis</Label>
+              <Label>Subtitle</Label>
                 <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
             </div>
 <div className="space-y-2">
-              <Label>Adresa / Spojeno s místem</Label>
+              <Label>Address / Connected to location...</Label>
               <Input value={address} onChange={(e) => setAddress(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Obsah článku</Label>
+              <Label>Content</Label>
               <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-[200px]" required />
             </div>
 
             <div className="space-y-2 border-t pt-4">
-              <Label>Přílohy (Obrázky, fotky, dokumenty PDF, atd.)</Label>
+              <Label>Attachments</Label>
               <Input 
                 type="file" 
                 multiple 
@@ -126,13 +126,13 @@ export default function ArticleForm() {
               />
               {selectedFiles && selectedFiles.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Vybráno souborů k nahrání: {selectedFiles.length}
+                  Number of attachments selected: {selectedFiles.length}
                 </p>
               )}
             </div>
 
             <Button disabled={isSubmitting} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
-              {isSubmitting ? "Ukládám..." : status === "DRAFT" ? "Uložit koncept" : "Publikovat článek"}
+              {isSubmitting ? "Processing..." : status === "DRAFT" ? "Save draft" : "Publish article"}
             </Button>
           </form>
         </CardContent>

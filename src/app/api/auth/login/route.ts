@@ -8,16 +8,15 @@ export async function POST(req: Request) {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-      return NextResponse.json({ message: "Email a heslo jsou povinné" }, { status: 400 });
+      return NextResponse.json({ message: "Email and password is required." }, { status: 400 });
     }
 
     const user = await prisma.users.findUnique({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      return NextResponse.json({ message: "Neplatné přihlašovací údaje" }, { status: 401 });
+      return NextResponse.json({ message: "Invalid login credentials" }, { status: 401 });
     }
 
-    // V produkci použij process.env.JWT_SECRET!
     const secret = process.env.JWT_SECRET || "super_secret_key";
     
     const token = jwt.sign(
@@ -27,16 +26,15 @@ export async function POST(req: Request) {
     );
 
     const response = NextResponse.json({
-      message: "Přihlášení úspěšné",
+      message: "Log In successful",
       user: { id: user.id, name: user.name, role: user.role }
     });
 
-    // Nastavení bezpečné cookie
     response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 dní v sekundách
+      maxAge: 60 * 60 * 24 * 7, 
       path: "/",
     });
 
@@ -44,6 +42,6 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    return NextResponse.json({ message: "Chyba při přihlašování" }, { status: 500 });
+    return NextResponse.json({ message: "Error while logging in" }, { status: 500 });
   }
 }

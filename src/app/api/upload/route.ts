@@ -9,11 +9,22 @@ export async function POST(request: Request): Promise<NextResponse> {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        allowedContentTypes: [
+  'image/jpeg', 
+  'image/png', 
+  'image/webp', 
+  'image/gif',
+  'text/plain',                                                               
+  'application/pdf',                                                           
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',         
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',                                                        
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  
+],
         tokenPayload: JSON.stringify({}), 
       }),
       onUploadCompleted: async ({ blob, tokenPayload }) => {
-        console.log('Upload dokončen:', blob.url);
+        console.log('Upload finished:', blob.url);
       },
     });
 

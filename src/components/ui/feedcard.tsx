@@ -25,19 +25,19 @@ interface FeedItem {
 export default function FeedCard(item: FeedItem) {
   const config = {
     ARTICLE: {
-      label: "Článek",
+      label: "Article",
       color: "border-t-blue-500",
       badge: "bg-blue-100 text-blue-700 hover:bg-blue-100",
       icon: <FileText className="w-3.5 h-3.5" />,
     },
     EVENT: {
-      label: "Akce",
+      label: "Event",
       color: "border-t-emerald-500",
       badge: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
       icon: <Calendar className="w-3.5 h-3.5" />,
     },
     AD: {
-      label: "Inzerát",
+      label: "Ad",
       color: "border-t-amber-500",
       badge: "bg-amber-100 text-amber-700 hover:bg-amber-100",
       icon: <Tag className="w-3.5 h-3.5" />,
@@ -61,7 +61,7 @@ export default function FeedCard(item: FeedItem) {
             )}
           </div>
           
-          <CardTitle className="text-lg font-bold leading-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+          <CardTitle className="text-lg font-bold leading-tight text-slate-900 transition-colors">
             {item.title}
           </CardTitle>
           
@@ -81,9 +81,9 @@ export default function FeedCard(item: FeedItem) {
         )}
 
         <CardFooter className="p-4 pt-0 flex justify-between items-center text-[11px] text-slate-400 border-t border-slate-50/50 mt-2">
-          <span>{item.date ? new Date(item.date).toLocaleDateString('cs-CZ') : 'Dnes'}</span>
+          <span>{item.date ? new Date(item.date).toLocaleDateString('cs-CZ') : 'Today'}</span>
           <span className="text-blue-600 font-semibold group-hover:underline">
-            Číst více →
+           Read more →
           </span>
         </CardFooter>
       </Card>
