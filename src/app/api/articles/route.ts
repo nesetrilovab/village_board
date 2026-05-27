@@ -1,62 +1,65 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth"; // Naimportujeme naši novou pomocnou funkci
+import { getSession } from "@/lib/auth";
+
+
+// 1. GET
 
 export async function GET() {
   try {
-    // Pro GET (veřejný feed) chceme načíst vše, co je PUBLISHED
-    // Později to můžeš upravit tak, aby ADMIN viděl vše i s drafty
     const articles = await prisma.articles.findMany({
-      where: {
-        status: "PUBLISHED", // Zobrazujeme jen publikované věci
-      },
       include: { 
         attachments: true,
-        author: true // Hodí se pro zobrazení jména autora u článku
+        author: true 
       },
       orderBy: { created_at: "desc" },
     });
+    
     return NextResponse.json(articles);
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET /api/articles error:", error);
-    return NextResponse.json({ message: "Chyba při načítání" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Chyba při načítání článků", detail: error.message }, 
+      { status: 500 }
+    );
   }
 }
 
+
+// 2. POST:
+
 export async function POST(req: Request) {
   try {
-    // 1. Ověření session (POŽADAVEK: Bez přihlášení zákaz interakce)
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ message: "Pro tuto akci se musíte přihlásit" }, { status: 401 });
+      return NextResponse.json(
+        { message: "Pro tuto akci se musíte přihlásit" }, 
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
 
-    // 2. Vytvoření článku
+    const { title, subtitle, text, address, status, attachments } = body;
+
     const article = await prisma.articles.create({
       data: {
-        title: body.title,
-        subtitle: body.subtitle || null,
-        text: body.text,
-        cover_image: body.cover_image || null,
+        title,
+        subtitle: subtitle || null,
+        text,
+        address: address || null, 
+        status: status?.toUpperCase() || "DRAFT", 
+        date_of_release: status?.toUpperCase() === "PUBLISHED" ? new Date() : null,
         
-        // POŽADAVEK: Schopnost vytvořit DRAFT
-        // Pokud z frontendu nepřijde status, použijeme DRAFT
-        status: body.status || "DRAFT", 
+        author: {
+          connect: { id: session.userId }
+        },
         
-        // ID bereme bezpečně ze session tokenu, ne z těla požadavku (to by mohl někdo podvrhnout)
-        author_id: session.userId, 
-        
-        date_of_release: body.status === "PUBLISHED" ? new Date() : null,
-        
-        attachments: body.cover_image ? {
-          create: [
-            {
-              filename: body.filename || "image.png",
-              url: body.cover_image,
-            }
-          ]
+        attachments: attachments && Array.isArray(attachments) ? {
+          create: attachments.map((file: { filename: string; url: string }) => ({
+            filename: file.filename,
+            url: file.url,
+          }))
         } : undefined,
       },
       include: {
@@ -64,9 +67,12 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(article);
-  } catch (error) {
+    return NextResponse.json(article, { status: 201 });
+  } catch (error: any) {
     console.error("POST /api/articles error:", error);
-    return NextResponse.json({ message: "Failed to create article" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Chyba při ukládání článku", detail: error.message }, 
+      { status: 500 }
+    );
   }
 }

@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function EventForm() {
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
+  const [text, setText] = useState("");
+  const [address, setAddress] = useState("");
   const [date, setDate] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [status, setStatus] = useState("PUBLISHED");
-  const [coverImage, setCoverImage] = useState<File | null>(null);
+  
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,13 +25,21 @@ export default function EventForm() {
     setIsSubmitting(true);
 
     try {
-      let coverUrl = "";
-      if (coverImage) {
-        const newBlob = await upload(coverImage.name, coverImage, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-        });
-        coverUrl = newBlob.url;
+      const attachmentsArray: { filename: string; url: string }[] = [];
+
+      if (selectedFiles && selectedFiles.length > 0) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const newBlob = await upload(file.name, file, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+          });
+          
+          attachmentsArray.push({
+            filename: file.name,
+            url: newBlob.url,
+          });
+        }
       }
 
       const res = await fetch("/api/events", {
@@ -38,21 +47,30 @@ export default function EventForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          description,
-          location,
+          subtitle: organizer || null,
+          text, 
+          address: address || null, 
           event_date: new Date(date).toISOString(),
-          organizer,
-          image_url: coverUrl,
           status,
-          author_id: "616a8870-e898-486a-bff8-7853cdbf786b",
+          attachments: attachmentsArray, 
         }),
       });
 
       if (res.ok) {
         alert(status === "DRAFT" ? "Událost uložena do konceptů!" : "Událost vytvořena!");
-        setTitle(""); setDescription(""); setLocation(""); setDate(""); setOrganizer(""); setCoverImage(null);
+        
+        setTitle(""); 
+        setText(""); 
+        setAddress(""); 
+        setDate(""); 
+        setOrganizer(""); 
+        setSelectedFiles(null);
+      } else {
+        const errData = await res.json();
+        alert(`Chyba při ukládání: ${errData.message}`);
       }
     } catch (err) {
+      console.error("Chyba při odesílání formuláře:", err);
       alert("Chyba při ukládání události.");
     } finally {
       setIsSubmitting(false);
@@ -67,10 +85,10 @@ export default function EventForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Viditelnost (Status)</Label>
+                <Label>Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -87,28 +105,37 @@ export default function EventForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Lokalita</Label>
-                <Input placeholder="Kde se akce koná?" value={location} onChange={(e) => setLocation(e.target.value)} required />
+                <Label>Adresa</Label>
+                <Input  value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Pořadatel / Organizátor</Label>
-                <Input placeholder="Např. SDH Lhota" value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
+                <Label>Pořadatel</Label>
+                <Input  value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Název události</Label>
-              <Input placeholder="Název akce" value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <Input  value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label>Podrobnosti o akci</Label>
-              <Textarea placeholder="Program, vstupné, atd..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px]" required />
+              <Label>Podrobnosti</Label>
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-30" required />
             </div>
 
             <div className="space-y-2">
-              <Label>Plakát / Ilustrační foto</Label>
-              <Input type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
+              <Label>Přílohy / Obrázky / Plakáty</Label>
+              <Input 
+                type="file" 
+                multiple 
+                onChange={(e) => setSelectedFiles(e.target.files)} 
+              />
+              {selectedFiles && selectedFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vybráno souborů: {selectedFiles.length}
+                </p>
+              )}
             </div>
 
             <Button disabled={isSubmitting} className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white">

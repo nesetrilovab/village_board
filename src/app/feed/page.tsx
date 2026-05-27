@@ -29,29 +29,28 @@ export default function FeedPage() {
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
             Vesnická nástěnka
           </h1>
+          <p className="text-slate-500 text-sm mt-2">Aktuální dění, akce a inzerce z naší obce</p>
         </header>
 
         {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          /* TADY JE TA ZMĚNA: columns místo grid */
-          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
-            {feed.length > 0 ? (
-              feed.map((item) => (
-                /* Přidán obalový div s 'break-inside-avoid', aby se karta nerozpůlila mezi sloupci */
-                <div key={`${item.type}-${item.id}`} className="break-inside-avoid mb-6">
-                  <FeedCard {...item} />
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-slate-500 py-10 w-full">
-                Zatím tu nejsou žádné příspěvky.
-              </p>
-            )}
-          </div>
-        )}
+  <div className="flex justify-center items-center h-64">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+) : feed.length > 0 ? (
+  <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
+    {feed.map((item) => (
+      <div key={`${item.type}-${item.id}`} className="break-inside-avoid mb-6">
+        <FeedCard {...item} />
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-20 bg-white rounded-2xl shadow-sm max-w-md mx-auto border border-slate-100">
+    <p className="text-slate-500 font-medium">
+      Zatím tu nejsou žádné příspěvky.
+    </p>
+  </div>
+)}
       </main>
     </div>
   );

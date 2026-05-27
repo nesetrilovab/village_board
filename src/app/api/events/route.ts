@@ -2,9 +2,36 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
+
+// 1. GET: Načtení všech událostí včetně jejich příloh
+
+export async function GET() {
+  try {
+    const events = await prisma.events.findMany({
+      include: {
+        author: true,
+        attachments: true, 
+      },
+      orderBy: {
+        event_date: "asc",
+      },
+    });
+
+    return NextResponse.json(events);
+  } catch (error: any) {
+    console.error("GET /api/events error:", error);
+    return NextResponse.json(
+      { message: "Chyba při načítání seznamu událostí", detail: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+
+// 2. POST: Vytvoření nové události včetně uložení příloh
+
 export async function POST(request: Request) {
   try {
-    // 1. Kontrola přihlášení (Požadavek: Zákaz interakce bez přihlášení)
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
@@ -15,32 +42,40 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    // 2. Vytvoření události
+   
+    const { title, subtitle, text, event_date, address, status, attachments } = body;
+
     const newEvent = await prisma.events.create({
       data: {
-        title: body.title,
-        subtitle: body.subtitle || null,
-        text: body.text,
-        cover_image: body.cover_image || null,
-        event_date: new Date(body.event_date),
-        address: body.address,
+        title,
+        subtitle: subtitle || null,
+        text, 
+        event_date: new Date(event_date),
+        address: address || null,
+        status: status?.toUpperCase() || "DRAFT",
+        date_of_release: status?.toUpperCase() === "PUBLISHED" ? new Date() : null,
         
-        // Sjednocení statusu (DRAFT/PUBLISHED)
-        status: body.status?.toUpperCase() || "DRAFT",
-        
-        // Změna: ID bereme bezpečně ze session
-        author_id: session.userId,
-        
-        // Pokud je status PUBLISHED, nastavíme datum vydání na teď
-        date_of_release: body.status?.toUpperCase() === "PUBLISHED" ? new Date() : null,
+        author: {
+          connect: { id: session.userId }
+        },
+
+        attachments: attachments && Array.isArray(attachments) ? {
+          create: attachments.map((file: { filename: string; url: string }) => ({
+            filename: file.filename,
+            url: file.url,
+          })),
+        } : undefined,
       },
+      include: {
+        attachments: true, 
+      }
     });
 
     return NextResponse.json(newEvent, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/events error:", error);
     return NextResponse.json(
-      { message: "Nepodařilo se vytvořit událost" },
+      { message: "Nepodařilo se vytvořit událost", detail: error.message },
       { status: 500 }
     );
   }

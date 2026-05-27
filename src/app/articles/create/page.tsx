@@ -13,9 +13,10 @@ export default function ArticleForm() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [text, setText] = useState("");
+  const [address, setAddress] = useState(""); 
   const [status, setStatus] = useState("PUBLISHED");
-  const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [attachments, setAttachments] = useState<File[]>([]);
+  
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,46 +24,52 @@ export default function ArticleForm() {
     setIsSubmitting(true);
 
     try {
-      let coverUrl = "";
-      if (coverImage) {
-        const newBlob = await upload(coverImage.name, coverImage, {
-          access: 'public',
-          handleUploadUrl: '/api/upload',
-        });
-        coverUrl = newBlob.url;
-      }
+      const attachmentsArray: { filename: string; url: string }[] = [];
 
-      const uploadedAttachments = await Promise.all(
-        attachments.map(async (file) => {
+      if (selectedFiles && selectedFiles.length > 0) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
           const newBlob = await upload(file.name, file, {
             access: 'public',
             handleUploadUrl: '/api/upload',
           });
-          return { filename: file.name, url: newBlob.url };
-        })
-      );
+          
+          attachmentsArray.push({
+            filename: file.name,
+            url: newBlob.url,
+          });
+        }
+      }
 
       const res = await fetch("/api/articles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          subtitle,
-          text,
+          title: title.trim(),
+          subtitle: subtitle.trim() || null,
+          text: text.trim(),
+          address: address.trim() || null,
           status,
-          cover_image: coverUrl,
-          attachments: uploadedAttachments,
-          author_id: "616a8870-e898-486a-bff8-7853cdbf786b",
-          date_of_release: new Date().toISOString(),
+          attachments: attachmentsArray, 
         }),
       });
 
-      if (res.ok) {
-        alert(status === "DRAFT" ? "Koncept článku uložen!" : "Článek publikován! 📰");
-        setTitle(""); setSubtitle(""); setText(""); setCoverImage(null); setAttachments([]);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Server vrátil chybu");
       }
-    } catch (err) {
-      alert("Chyba při ukládání článku.");
+
+      alert(status === "DRAFT" ? "Koncept uložen!" : "Článek publikován! 📰");
+      
+      setTitle(""); 
+      setSubtitle(""); 
+      setText(""); 
+      setAddress("");
+      setSelectedFiles(null);
+
+    } catch (err: any) {
+      console.error("Chyba při odesílání:", err);
+      alert(`Chyba: ${err.message || "Něco se pokazelo"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,43 +86,52 @@ export default function ArticleForm() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Viditelnost (Status)</Label>
+                <Label>Status</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PUBLISHED">Zveřejnit ihned</SelectItem>
-                    <SelectItem value="DRAFT">Uložit jako koncept</SelectItem>
+                    <SelectItem value="PUBLISHED">Zveřejnit článek</SelectItem>
+                    <SelectItem value="DRAFT">Uložit koncept</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Podnadpis (volitelný)</Label>
-                <Input placeholder="Krátké info pod nadpis" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+                <Label>Název článku</Label>
+              <Input  value={title} onChange={(e) => setTitle(e.target.value)} required />
+
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Název článku</Label>
-              <Input placeholder="Hlavní titulek" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </div>
+            
 
+            <div className="space-y-2">
+              <Label>Podnadpis</Label>
+                <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+            </div>
+<div className="space-y-2">
+              <Label>Adresa / Spojeno s místem</Label>
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
             <div className="space-y-2">
               <Label>Obsah článku</Label>
-              <Textarea placeholder="Pište zde..." value={text} onChange={(e) => setText(e.target.value)} className="min-h-[200px]" required />
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} className="min-h-[200px]" required />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label>Titulní foto</Label>
-                <Input type="file" onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Přílohy (PDF, atd.)</Label>
-                <Input type="file" multiple onChange={(e) => setAttachments(Array.from(e.target.files || []))} />
-              </div>
+            <div className="space-y-2 border-t pt-4">
+              <Label>Přílohy (Obrázky, fotky, dokumenty PDF, atd.)</Label>
+              <Input 
+                type="file" 
+                multiple 
+                onChange={(e) => setSelectedFiles(e.target.files)} 
+              />
+              {selectedFiles && selectedFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Vybráno souborů k nahrání: {selectedFiles.length}
+                </p>
+              )}
             </div>
 
-            <Button disabled={isSubmitting} className="w-full mt-4 bg-blue-600 hover:bg-blue-700">
+            <Button disabled={isSubmitting} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
               {isSubmitting ? "Ukládám..." : status === "DRAFT" ? "Uložit koncept" : "Publikovat článek"}
             </Button>
           </form>

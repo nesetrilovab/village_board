@@ -2,9 +2,34 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
+
+// 1. GET: Načtení všech inzerátů včetně jejich příloh
+
+export async function GET() {
+  try {
+    const ads = await prisma.ads.findMany({
+      include: {
+        attachments: true,
+        author: true,
+      },
+      orderBy: { created_at: "desc" },
+    });
+
+    return NextResponse.json(ads);
+  } catch (error: any) {
+    console.error("GET /api/ads error:", error);
+    return NextResponse.json(
+      { message: "Chyba při načítání inzerátů", detail: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+
+// 2. POST: Vytvoření inzerátu včetně uložení příloh
+
 export async function POST(req: Request) {
   try {
-    // 1. Ověření přihlášení (Požadavek: Zákaz interakce bez přihlášení)
     const session = await getSession();
     if (!session) {
       return NextResponse.json(
@@ -14,34 +39,40 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+    const { ad_type, title, item_name, price, text, address, status, attachments } = body;
 
-    // 2. Vytvoření inzerátu v DB
     const ad = await prisma.ads.create({
       data: {
-        ad_type: body.ad_type?.toUpperCase() || "ITEM",
-        title: body.title,
-        item_name: body.item_name || null,
-        picture: body.picture || null,
-        price: body.price ? Number(body.price) : null,
-        description: body.description,
-        location: body.location || null,
+        ad_type: ad_type?.toUpperCase() || "ITEM",
+        title,
+        item_name: item_name || null,
+        price: price ? Number(price) : null,
+        text,
+        address: address || null, 
+        status: status?.toUpperCase() || "DRAFT",
+        date_of_release: status?.toUpperCase() === "PUBLISHED" ? new Date() : null,
         
-        // Status bereme z body (pro drafty), nebo defaultně DRAFT
-        status: body.status?.toUpperCase() || "DRAFT",
-        
-        // ZDE JE TA ZMĚNA: ID bereme ze session
-        author_id: session.userId, 
-        
-        // Pokud publikujeme, nastavíme aktuální datum, jinak null (u draftu)
-        date_of_release: body.status === "PUBLISHED" ? new Date() : null,
+        author: {
+          connect: { id: session.userId }
+        },
+
+        attachments: attachments && Array.isArray(attachments) ? {
+          create: attachments.map((file: { filename: string; url: string }) => ({
+            filename: file.filename,
+            url: file.url,
+          })),
+        } : undefined,
       },
+      include: {
+        attachments: true,
+      }
     });
 
-    return NextResponse.json(ad);
-  } catch (error) {
+    return NextResponse.json(ad, { status: 201 });
+  } catch (error: any) {
     console.error("POST /api/ads error:", error);
     return NextResponse.json(
-      { message: "Chyba při vytváření inzerátu" },
+      { message: "Chyba při vytváření inzerátu", detail: error.message },
       { status: 500 }
     );
   }

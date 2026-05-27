@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-10-16", // nebo nejnovější
+  apiVersion: "2026-04-22.dahlia",
 });
 
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
             product_data: {
               name: `Inzerát: ${title}`,
             },
-            unit_amount: 200, // 2.00 USD (zadává se v centech)
+            unit_amount: 200,
           },
           quantity: 1,
         },
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       mode: "payment",
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?id=${adId}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/feed`,
-      metadata: { adId }, // Důležité pro pozdější identifikaci inzerátu
+      metadata: { adId }, 
     });
 
     return NextResponse.json({ url: session.url });
