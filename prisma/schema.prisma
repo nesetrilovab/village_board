@@ -4,79 +4,145 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("POSTGRES_URL") 
-  // directUrl = env("POSTGRES_URL") // Tady klidně nechej stejnou, pokud NON_POOLING chybí
+  url      = env("POSTGRES_URL")
 }
 
 model ads {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ad_type         String        @db.VarChar(20)
-  title           String        @db.VarChar(255)
-  item_name       String?       @db.VarChar(255)
-  price           Decimal?      @db.Decimal(10, 2)
-  text            String        // Změněno z description na text
-  address         String?       @db.VarChar(255) // Přidáno jako NEPOVINNÉ (String?)
-  status          String        @default("DRAFT") @db.VarChar(20)
-  author_id       String        @db.Uuid
-  date_of_release DateTime?     @db.Timestamp(6)
-  created_at      DateTime      @default(now()) @db.Timestamp(6)
-  
-  author          users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ad_author")
-  attachments     attachments[] // Přidána vazba na přílohy
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ad_type         String    @db.VarChar(20)
+  title           String    @db.VarChar(255)
+  item_name       String?   @db.VarChar(255)
+  price           Decimal?  @db.Decimal(10, 2)
+  text            String
+  address         String?   @db.VarChar(255)
+  status          String    @default("DRAFT") @db.VarChar(20)
+  author_id       String    @db.Uuid
+  date_of_release DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  author      users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ad_author")
+  attachments attachments[]
+
+  // 👈 Zpětná vazba na nová hodnocení
+  reviews reviews[]
 }
 
 model articles {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String        @db.VarChar(255)
-  subtitle        String?       @db.VarChar(255)
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String    @db.VarChar(255)
+  subtitle        String?   @db.VarChar(255)
   text            String
-  address         String?       @db.VarChar(255) // Přidáno jako NEPOVINNÉ (String?)
-  status          String        @default("DRAFT") @db.VarChar(20)
-  author_id       String        @db.Uuid
-  date_of_release DateTime?     @db.Timestamp(6)
-  created_at      DateTime      @default(now()) @db.Timestamp(6)
-  
-  author          users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_author")
-  attachments     attachments[]
+  address         String?   @db.VarChar(255)
+  status          String    @default("DRAFT") @db.VarChar(20)
+  author_id       String    @db.Uuid
+  date_of_release DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  author      users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_author")
+  attachments attachments[]
+
+  // 👈 Zpětná vazba na nové komentáře
+  comments comments[]
 }
 
 model events {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String        @db.VarChar(255)
-  subtitle        String?       @db.VarChar(255)
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String    @db.VarChar(255)
+  subtitle        String?   @db.VarChar(255)
   text            String
-  event_date      DateTime      @db.Timestamp(6)
-  address         String?       @db.VarChar(255) // Změněno na NEPOVINNÉ (String?)
-  status          String        @default("DRAFT") @db.VarChar(20)
-  author_id       String        @db.Uuid
-  date_of_release DateTime?     @db.Timestamp(6)
-  created_at      DateTime      @default(now()) @db.Timestamp(6)
-  
-  author          users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event_author")
-  attachments     attachments[]
+  event_date      DateTime  @db.Timestamp(6)
+  address         String?   @db.VarChar(255)
+  status          String    @default("DRAFT") @db.VarChar(20)
+  author_id       String    @db.Uuid
+  date_of_release DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  author      users         @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event_author")
+  attachments attachments[]
+
+  // 👈 Zpětná vazba na nové komentáře
+  comments comments[]
 }
 
 model attachments {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  filename   String    @db.VarChar(255)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename   String   @db.VarChar(255)
   url        String
-  article_id String?   @db.Uuid
-  event_id   String?   @db.Uuid
-  ad_id      String?   @db.Uuid // Přidáno pro inzeráty
-  created_at DateTime  @default(now()) @db.Timestamp(6)
+  article_id String?  @db.Uuid
+  event_id   String?  @db.Uuid
+  ad_id      String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
 
-  articles   articles? @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_article")
-  events     events?   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_event")
-  ads        ads?      @relation(fields: [ad_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_ad") // Nová relace
+  articles articles? @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_article")
+  events   events?   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_event")
+  ads      ads?      @relation(fields: [ad_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachment_ad")
 }
+
 model users {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String     @db.VarChar(100)
-  email         String     @unique @db.VarChar(255)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String   @db.VarChar(100)
+  email         String   @unique @db.VarChar(255)
   password_hash String
-  role          String     @default("USER") @db.VarChar(20)
-  created_at    DateTime   @default(now()) @db.Timestamp(6)
-  ads           ads[]
-  articles      articles[]
-  events        events[]
+  role          String   @default("USER") @db.VarChar(20)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  ads      ads[]
+  articles articles[]
+  events   events[]
+
+  // 👈 Zpětné vazby z nových modelů (přidané správné typy a názvy)
+  comments      comments[]
+  comment_likes comment_likes[]
+  reviews       reviews[]
+}
+
+// -------------------------------------------------------------------
+// NOVÉ MODELY (Opravené názvy, typy na @db.Uuid a sjednocený styl)
+// -------------------------------------------------------------------
+
+model comments {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  text       String
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  user_id String @db.Uuid
+  user    users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  article_id String?   @db.Uuid
+  article    articles? @relation(fields: [article_id], references: [id], onDelete: Cascade)
+
+  event_id String? @db.Uuid
+  event    events? @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  // Vlákna (Self-relation)
+  parent_id String?    @db.Uuid
+  parent    comments?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies   comments[] @relation("CommentReplies")
+
+  likes comment_likes[]
+}
+
+model comment_likes {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  comment_id String   @db.Uuid
+  comment    comments @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user_id    String   @db.Uuid
+  user       users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([comment_id, user_id])
+}
+
+model reviews {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rating     Int
+  text       String?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  user_id String @db.Uuid
+  user    users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  ad_id String @db.Uuid
+  ad    ads    @relation(fields: [ad_id], references: [id], onDelete: Cascade)
+
+  @@unique([ad_id, user_id])
 }

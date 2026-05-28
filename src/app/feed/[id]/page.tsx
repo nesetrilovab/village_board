@@ -17,6 +17,7 @@ import {
   Tag,
   Info
 } from "lucide-react";
+import ReviewsSection from "@/components/ui/reviewsSection"; // Opravená cesta k tvé nové komponentě
 
 interface Attachment {
   id: string;
@@ -30,13 +31,11 @@ export default function DetailPage() {
   const [data, setData] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
+const fetchData = async () => {
       try {
         const [resPost, resUser] = await Promise.all([
           fetch(`/api/feed/${id}`),
-          fetch("/api/auth/me")
+          fetch("/api/auth/me") // Tvoje routa vracející přihlášeného uživatele
         ]);
 
         if (resPost.ok) setData(await resPost.json());
@@ -44,9 +43,11 @@ export default function DetailPage() {
       } catch (err) {
         console.error("Error while loading:", err);
       } finally {
-        loading && setLoading(false);
+        setLoading(false);
       }
     };
+  useEffect(() => {
+    
     fetchData();
   }, [id]);
 
@@ -67,6 +68,11 @@ export default function DetailPage() {
   const isAdmin = user?.role === "ADMIN";
   const canEdit = isOwner || isAdmin;
 
+  // Proměnné pro ReviewsSection předávané z načtených API dat
+  const currentUserId = user?.userId || null;
+  const isAuthor = data.author_id === currentUserId;
+  const reviews = data.reviews || []; // API routa nám vrátí recenze v tomhle poli
+
   const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
   const images = data.attachments?.filter((att: Attachment) =>
     imageExtensions.includes(att.filename.split('.').pop()?.toLowerCase() || '')
@@ -85,12 +91,10 @@ export default function DetailPage() {
   const currentType = typeConfig[data.type as keyof typeof typeConfig] || typeConfig.ARTICLE;
 
   return (
-
-
     <main className="max-w-6xl mx-auto px-4 sm:px-6 mt-10">
       <Card className="rounded-3xl shadow-sm border-slate-100 overflow-hidden bg-white">
-        <div className="min-h-screen bg-slate-50/50 pb-20">
-          <div className="sticky bg-white/80 backdrop-blur-md z-40 border-b border-slate-100 shadow-sm">
+        <div className="bg-slate-50/50 pb-10">
+          <div className="sticky top-0 bg-white/80 backdrop-blur-md z-40 border-b border-slate-100 shadow-sm">
             <div className="max-w-8xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
               <Button variant="ghost" onClick={() => router.push("/feed")} className="gap-2 rounded-xl text-slate-600 hover:text-slate-900">
                 <ArrowLeft size={18} /> Back to board
@@ -117,8 +121,8 @@ export default function DetailPage() {
               )}
             </div>
           </div>
-          <CardContent className="p-6 sm:p-10 space-y-8">
 
+          <CardContent className="p-6 sm:p-10 space-y-8">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className={`${currentType.badgeStyle} font-bold px-3 py-1 text-xs uppercase tracking-wider rounded-lg`}>
                 {currentType.label}
@@ -228,7 +232,7 @@ export default function DetailPage() {
                   Gallery ({images.length})
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {images.map((img: Attachment, index: number) => (
+                  {images.map((img: Attachment) => (
                     <div key={img.id} className="relative aspect-video w-full rounded-2xl overflow-hidden group shadow-sm border border-slate-100 bg-slate-50">
                       <img
                         src={img.url}
@@ -273,9 +277,21 @@ export default function DetailPage() {
                 </div>
               </div>
             )}
-
           </CardContent>
         </div>
+
+        {/* Sekce recenzí se vykreslí na konci, pokud jde o inzerát (AD) */}
+        {data.type === "AD" && (
+          <div className="p-6 sm:p-10 border-t border-slate-100 bg-white">
+            <ReviewsSection
+              reviews={reviews}
+              adId={data.id}
+              currentUserId={currentUserId}
+              isAuthor={isAuthor}
+              onUpdate={fetchData}
+            />
+          </div>
+        )}
       </Card>
     </main>
   );

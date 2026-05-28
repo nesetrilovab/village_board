@@ -37,7 +37,16 @@ export async function GET(
 
     const ad = await prisma.ads.findUnique({
       where: { id },
-      include: { attachments: true, author: true },
+      include: { author: true,
+  attachments: true,
+  reviews: {
+    include: {
+      user: true, 
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+  },},
     });
     if (ad) {
       if (!canSee(ad)) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
