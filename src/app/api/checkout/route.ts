@@ -9,12 +9,6 @@ export async function POST(req: Request) {
   try {
     const { adId, title } = await req.json();
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL 
-      ? process.env.NEXT_PUBLIC_BASE_URL 
-      : process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : "http://localhost:3000";
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -30,8 +24,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${baseUrl}/success?id=${adId}`,
-      cancel_url: `${baseUrl}/feed`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?id=${adId}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/feed`,
       metadata: { adId }, 
     });
 

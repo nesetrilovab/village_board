@@ -28,8 +28,9 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/feed"); 
         router.refresh(); 
+        router.push("/feed"); 
+        
       } else {
         const data = await res.json();
         setError(data.message || "Incorrect email or password");
