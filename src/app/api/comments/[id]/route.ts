@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  req: Request, 
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const commentId = params.id;
+    // Next.js 15 fix: rozbalení asynchronních params
+    const { id: commentId } = await context.params;
 
     const existingLike = await prisma.comment_likes.findUnique({
       where: {
@@ -40,14 +44,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request, 
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const commentId = params.id;
+    // Next.js 15 fix: rozbalení asynchronních params
+    const { id: commentId } = await context.params;
 
     const comment = await prisma.comments.findUnique({
       where: { id: commentId },
