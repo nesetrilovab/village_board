@@ -17,7 +17,8 @@ import {
   Tag,
   Info
 } from "lucide-react";
-import ReviewsSection from "@/components/ui/reviewsSection"; // Opravená cesta k tvé nové komponentě
+import ReviewsSection from "@/components/ui/reviewsSection";
+import CommentsSection from "@/components/ui/commentsSection"; 
 
 interface Attachment {
   id: string;
@@ -31,23 +32,24 @@ export default function DetailPage() {
   const [data, setData] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-const fetchData = async () => {
-      try {
-        const [resPost, resUser] = await Promise.all([
-          fetch(`/api/feed/${id}`),
-          fetch("/api/auth/me") // Tvoje routa vracející přihlášeného uživatele
-        ]);
 
-        if (resPost.ok) setData(await resPost.json());
-        if (resUser.ok) setUser(await resUser.json());
-      } catch (err) {
-        console.error("Error while loading:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      const [resPost, resUser] = await Promise.all([
+        fetch(`/api/feed/${id}`),
+        fetch("/api/auth/me")
+      ]);
+
+      if (resPost.ok) setData(await resPost.json());
+      if (resUser.ok) setUser(await resUser.json());
+    } catch (err) {
+      console.error("Error while loading:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    
     fetchData();
   }, [id]);
 
@@ -68,10 +70,12 @@ const fetchData = async () => {
   const isAdmin = user?.role === "ADMIN";
   const canEdit = isOwner || isAdmin;
 
-  // Proměnné pro ReviewsSection předávané z načtených API dat
   const currentUserId = user?.userId || null;
+  const currentUserRole = user?.role || null; 
   const isAuthor = data.author_id === currentUserId;
-  const reviews = data.reviews || []; // API routa nám vrátí recenze v tomhle poli
+  
+  const reviews = data.reviews || [];
+  const comments = data.comments || [];
 
   const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
   const images = data.attachments?.filter((att: Attachment) =>
@@ -280,7 +284,6 @@ const fetchData = async () => {
           </CardContent>
         </div>
 
-        {/* Sekce recenzí se vykreslí na konci, pokud jde o inzerát (AD) */}
         {data.type === "AD" && (
           <div className="p-6 sm:p-10 border-t border-slate-100 bg-white">
             <ReviewsSection
@@ -288,6 +291,19 @@ const fetchData = async () => {
               adId={data.id}
               currentUserId={currentUserId}
               isAuthor={isAuthor}
+              onUpdate={fetchData}
+            />
+          </div>
+        )}
+
+        {(data.type === "ARTICLE" || data.type === "EVENT") && (
+          <div className="p-6 sm:p-10 border-t border-slate-100 bg-white">
+            <CommentsSection
+              comments={comments}
+              postId={data.id}
+              postType={data.type}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
               onUpdate={fetchData}
             />
           </div>

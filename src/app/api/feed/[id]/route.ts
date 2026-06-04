@@ -17,9 +17,23 @@ export async function GET(
       return item.author_id === session.userId;
     };
 
+    const commentsInclude = {
+      include: {
+        user: true,          
+        likes: true, 
+      },
+      orderBy: {
+        created_at: "asc" as const, 
+      },
+    };
+
     const article = await prisma.articles.findUnique({
       where: { id },
-      include: { attachments: true, author: true },
+      include: { 
+        attachments: true, 
+        author: true,
+        comments: commentsInclude 
+      },
     });
     if (article) {
       if (!canSee(article)) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
@@ -28,7 +42,11 @@ export async function GET(
 
     const event = await prisma.events.findUnique({
       where: { id },
-      include: { attachments: true, author: true },
+      include: { 
+        attachments: true, 
+        author: true,
+        comments: commentsInclude
+      },
     });
     if (event) {
       if (!canSee(event)) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
@@ -37,16 +55,18 @@ export async function GET(
 
     const ad = await prisma.ads.findUnique({
       where: { id },
-      include: { author: true,
-  attachments: true,
-  reviews: {
-    include: {
-      user: true, 
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-  },},
+      include: { 
+        author: true,
+        attachments: true,
+        reviews: {
+          include: {
+            user: true, 
+          },
+          orderBy: {
+            created_at: "desc",
+          },
+        },
+      },
     });
     if (ad) {
       if (!canSee(ad)) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
